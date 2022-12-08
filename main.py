@@ -64,12 +64,11 @@ def generate_video_name(name):
     """ Returns a unique file name for the output video, using 'name' as a base. """
     
     video_id = 0
-    name_template = "output/" + name + str(video_id) + ".mp4"
 
-    while os.path.exists(name_template):
+    while os.path.exists("output/" + name + str(video_id) + ".mp4"):
         video_id += 1
         
-    return name_template
+    return "output/" + name + str(video_id) + ".mp4"
         
 def compile_video(clips):
     """ Compiles all clips in list 'clips' together in a random order and outputs the resulting video. """
