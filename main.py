@@ -1,65 +1,86 @@
 import os
 import random
 import math
-from moviepy.editor import *
+import moviepy.editor as mpy
+import config
 
-min_subclip_length = 1  # minimum length each subclip can be (in seconds)
-max_subclip_length = 5  # maximum length each subclip can be (in seconds)
+def generate_source_clips():
+    """ Returns a list of VideoFileClips containing a random amount of videos in directory 'sources'. """
 
-min_subclip_num = 1 # minimum number of subclips to be generated per source clip
-max_subclip_num = 5 # maximum number of subclips to be generated per source clip
+    source_clips = []
 
-min_video_effects = 0 # minimum number of video effects that can be applied to a subclip
-max_video_effects = 2 # maximum number of video effects that can be applied to a subclip
+    for root, dirs, files in os.walk("sources"):
+        for file in files:
+            source_clips.append(mpy.VideoFileClip(os.path.join(root, file)))
 
-video_effects = ["invert_colors", "speedx", "time_mirror", "time_symmetrize"] # video effects to be applied to subclips
-
-min_speedx_factor = 0.25 # minimum factor by which a subclip can be sped up or slowed down
-max_speedx_factor = 4    # maximum factor by which a subclip can be sped up or slowed down
-
-# get each video in source folder
-source_clips = []
-
-for root, dirs, files in os.walk("sources"):
-    for file in files:
-        source_clips.append(VideoFileClip(os.path.join(root, file)))
+    source_clip_num = random.randint(config.min_source_clip_num, config.max_source_clip_num)
+    return random.choices(source_clips, k=source_clip_num)
         
-# resize source clips to a consistent size
-source_clips.sort(reverse=True, key=lambda clip : clip.h)
+def resize_clips(clips):
+    """ Resizes all clips in list 'clips' to be the same height as the clip with the largest height while maintaining aspect ratio. """
 
-for i in range(len(source_clips)):
-    source_clips[i] = source_clips[i].resize(height=source_clips[0].h)
-        
-# cut each source clip into random subclips
-subclips = []
+    clips.sort(reverse=True, key=lambda clip : clip.h)
 
-for clip in source_clips:
-    for x in range(random.randint(min_subclip_num, max_subclip_num)):
-        if max_subclip_length > clip.duration:
-            subclip_length = random.uniform(min_subclip_length, clip.duration)
-        else:
-            subclip_length = random.uniform(min_subclip_length, max_subclip_length)
+    for i in range(len(clips)):
+        clips[i] = clips[i].resize(height=clips[0].h)
+        
+def cut_clips(clips):
+    """ Returns a list containing a random amount of subclips of random length cut from each clip in list 'clips'. """
 
-        subclip_start = random.uniform(min_subclip_length, clip.duration - subclip_length)
-        subclips.append(clip.subclip(subclip_start, subclip_start + subclip_length))
+    subclips = []
+
+    for clip in clips:
+        for x in range(random.randint(config.min_subclip_num, config.max_subclip_num)):
+            if config.max_subclip_length > clip.duration:
+                subclip_length = random.uniform(config.min_subclip_length, clip.duration)
+            else:
+                subclip_length = random.uniform(config.min_subclip_length, config.max_subclip_length)
+
+            subclip_start = random.uniform(config.min_subclip_length, clip.duration - subclip_length)
+            subclips.append(clip.subclip(subclip_start, subclip_start + subclip_length))
+            
+    return subclips
         
-# apply random effects to subclips
-for i in range(len(subclips)):
-    video_effects_num = random.randint(min_video_effects, max_video_effects)
-    subclip_video_effects = random.choices(video_effects, k=video_effects_num)
-    for effect in subclip_video_effects:
-        if effect == "invert_colors":
-            subclips[i] = subclips[i].invert_colors()
-        elif effect == "speedx":
-            subclips[i] = subclips[i].speedx(factor=random.uniform(min_speedx_factor, max_speedx_factor))
-        elif effect == "time_mirror":
-            subclips[i] = subclips[i].fx(vfx.time_mirror)
-        elif effect == "time_symmetrize":
-            subclips[i] = subclips[i].fx(vfx.time_symmetrize)
-        else:
-            print("Effect '" + effect + "' does not exist!")
+def apply_video_effects(clips):
+    """ Applies a random amount of video effects to each clip in list 'clips'. """
+
+    for i in range(len(clips)):
+        video_effects_num = random.randint(config.min_video_effects, config.max_video_effects)
+        subclip_video_effects = random.choices(config.video_effects, k=video_effects_num)
+
+        for effect in subclip_video_effects:
+            if effect == "invert_colors":
+                clips[i] = clips[i].invert_colors()
+            elif effect == "speedx":
+                clips[i] = clips[i].speedx(factor=random.uniform(config.min_speedx_factor, config.max_speedx_factor))
+            elif effect == "time_mirror":
+                clips[i] = clips[i].fx(mpy.vfx.time_mirror)
+            elif effect == "time_symmetrize":
+                clips[i] = clips[i].fx(mpy.vfx.time_symmetrize)
+            else:
+                print("Effect '" + effect + "' does not exist!")
+                
+def generate_video_name(name):
+    """ Returns a unique file name for the output video, using 'name' as a base. """
+    
+    video_id = 0
+    name_template = "output/" + name + str(video_id) + ".mp4"
+
+    while os.path.exists(name_template):
+        video_id += 1
         
-# put together + output final video
-random.shuffle(subclips)
-video_output = concatenate_videoclips(subclips, method="compose")
-video_output.write_videofile("output/ytp.mp4")
+    return name_template
+        
+def compile_video(clips):
+    """ Compiles all clips in list 'clips' together in a random order and outputs the resulting video. """
+
+    random.shuffle(clips)
+    video_output = mpy.concatenate_videoclips(clips, method="compose")
+    video_output.write_videofile(generate_video_name("ytp"))
+    
+source_clips = generate_source_clips()
+resize_clips(source_clips)
+
+subclips = cut_clips(source_clips)
+apply_video_effects(subclips)
+compile_video(subclips)
