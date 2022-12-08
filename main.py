@@ -31,12 +31,12 @@ def cut_clips(clips):
 
     for clip in clips:
         for x in range(random.randint(config.min_subclip_num, config.max_subclip_num)):
-            if config.max_subclip_length > clip.duration:
-                subclip_length = random.uniform(config.min_subclip_length, clip.duration)
+            if config.max_subclip_length > math.floor(clip.duration):
+                subclip_length = random.uniform(config.min_subclip_length, math.floor(clip.duration))
             else:
                 subclip_length = random.uniform(config.min_subclip_length, config.max_subclip_length)
 
-            subclip_start = random.uniform(config.min_subclip_length, clip.duration - subclip_length)
+            subclip_start = random.uniform(config.min_subclip_length, math.floor(clip.duration) - subclip_length)
             subclips.append(clip.subclip(subclip_start, subclip_start + subclip_length))
             
     return subclips
