@@ -13,23 +13,25 @@ class Clip:
         self.duration = float(ffmpeg.probe(path)["format"]["duration"])
         self.dimensions = int(ffmpeg.probe(path)["streams"][0]["width"]), int(ffmpeg.probe(path)["streams"][0]["height"])
         
+clips = []
+        
 # Get a random number of clips from 'sources' directory.
-source_clips = []
-
 for root, dirs, files in os.walk("sources"):
     for file in files:
-        source_clips.append(Clip(os.path.join(root, file)))
+        clips.append(Clip(os.path.join(root, file)))
 
 source_clip_num = random.randint(config.min_source_clip_num, config.max_source_clip_num)
-source_clips = random.sample(source_clips, k=source_clip_num)
+clips = random.sample(clips, k=source_clip_num)
 
 # Cut a random number of subclips from each source clip.
-if not os.path.isdir("temp"):
-    os.mkdir("temp")
+if os.path.isdir("temp"):
+    shutil.rmtree("temp")
+
+os.mkdir("temp")
 
 subclips = []
 
-for i, clip in enumerate(source_clips):
+for i, clip in enumerate(clips):
     for x in range(random.randint(config.min_subclip_num, config.max_subclip_num)):
         if config.max_subclip_length > clip.duration:
             subclip_length = random.uniform(config.min_subclip_length, clip.duration)
@@ -44,52 +46,36 @@ for i, clip in enumerate(source_clips):
         
         ffmpeg.output(subclip_video, subclip_audio, subclip_output_name).run()
         subclips.append(Clip(subclip_output_name))
+        
+clips = subclips
             
 # Resize all subclips to a consistent size.
-subclips.sort(reverse=True, key=lambda clip : clip.dimensions[1])
+clips.sort(reverse=True, key=lambda clip : clip.dimensions[1])
 
-resized_clips = []
+clip_0_width, clip_0_height = clips[0].dimensions
 
-clip_0_width, clip_0_height = subclips[0].dimensions
-
-for i, clip in enumerate(subclips):
-    clip_video_resized = clip.video.filter("scale", width=clip_0_width, height=clip_0_height, force_original_aspect_ratio=1).filter("pad", width=clip_0_width, height=clip_0_height, x="(ow-iw)/2", y="(oh-ih)/2")
-    clip_output_name = "temp/resized" + str(i) + ".mp4"
-
-    ffmpeg.output(clip_video_resized, clip.audio, clip_output_name).run()
-    resized_clips.append(Clip(clip_output_name))
-
-subclips = resized_clips
+for i, clip in enumerate(clips):
+    clip.video = clip.video.filter("scale", width=clip_0_width, height=clip_0_height, force_original_aspect_ratio=1).filter("pad", width=clip_0_width, height=clip_0_height, x="(ow-iw)/2", y="(oh-ih)/2")
 
 # Apply random effects to subclips.
-effects_clips= []
-
-for i, clip in enumerate(subclips):
+for i, clip in enumerate(clips):
     effects_num = random.randint(config.min_effects, config.max_effects)
     subclip_effects = random.choices(config.effects, k=effects_num)
     
-    subclip_video = clip.video
-    subclip_audio = clip.audio
-    subclip_output_name = "temp/effects" + str(i) + ".mp4"
-
     for effect in subclip_effects:
         if effect == "invert_colors":
-            subclip_video = subclip_video.filter("negate")
+            clip.video = clip.video.filter("negate")
         elif effect == "speedx":
             speedx_factor = random.uniform(config.min_speedx_factor, config.max_speedx_factor)
-            subclip_video = subclip_video.setpts("PTS/" + str(speedx_factor))
-            subclip_audio = subclip_audio.filter("atempo", speedx_factor)
+            clip.video = clip.video.setpts("PTS/" + str(speedx_factor))
+            clip.audio = clip.audio.filter("atempo", speedx_factor)
         elif effect == "reverse":
-            subclip_video = subclip_video.filter("reverse")
-            subclip_audio = subclip_audio.filter("areverse")
+            clip.video = clip.video.filter("reverse")
+            clip.audio = clip.audio.filter("areverse")
         else:
             print("Effect '" + effect + "' does not exist!")
             
-    ffmpeg.output(subclip_video, subclip_audio, subclip_output_name).run()
-    effects_clips.append(Clip(subclip_output_name))
-    
-subclips = effects_clips
-                
+# Concatenate all subclips and output resulting video.
 def generate_video_name(name):
     """ Returns a unique file name for the output video, using 'name' as a base. """
     
@@ -100,11 +86,10 @@ def generate_video_name(name):
         
     return "output/" + name + str(video_id) + ".mp4"
         
-# Concatenate all subclips and output resulting video.
-random.shuffle(subclips)
+random.shuffle(clips)
 
 video_output = []
-for clip in subclips:
+for clip in clips:
     video_output.append(clip.video)
     video_output.append(clip.audio)
 
