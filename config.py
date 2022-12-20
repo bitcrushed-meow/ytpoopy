@@ -10,7 +10,7 @@ max_subclip_num = 5  # maximum number of subclips to be generated per source cli
 min_effects = 0  # minimum number of video effects that can be applied to a subclip
 max_effects = 2  # maximum number of video effects that can be applied to a subclip
 
-effects = ["invert_colors", "speedx", "reverse"]  # effects that can be applied to subclips
+effects = ["invert_colors", "speedx", "reverse", "bitcrush"]  # effects that can be applied to subclips
 
 min_speedx_factor = 0.5  # minimum factor by which a subclip can be sped up or slowed down
 max_speedx_factor = 2    # maximum factor by which a subclip can be sped up or slowed down

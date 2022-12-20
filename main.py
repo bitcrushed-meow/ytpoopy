@@ -7,6 +7,7 @@ import config
 
 class Clip:
     def __init__(self, path):
+        self.path = path
         self.input = ffmpeg.input(path)
         self.video = self.input.video
         self.audio = self.input.audio
@@ -72,6 +73,10 @@ for i, clip in enumerate(clips):
         elif effect == "reverse":
             clip.video = clip.video.filter("reverse")
             clip.audio = clip.audio.filter("areverse")
+        elif effect == "bitcrush":
+            bitcrush_path = clip.path[:-4] + "_bitcrush.mp4"
+            ffmpeg.output(clip.video, clip.audio, bitcrush_path, video_bitrate=50000, audio_bitrate=25000).run()
+            clips[i] = Clip(bitcrush_path)
         else:
             print("Effect '" + effect + "' does not exist!")
             
