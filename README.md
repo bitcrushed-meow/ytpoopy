@@ -17,14 +17,19 @@ Generate hilariously nonsensical videos. Comes with a selection of funny videos 
 git clone https://github.com/m-meowdev/ytpoopy.git ytpoopy/
 ```
 
-2. Optionally, add some of your own videos to the `sources` directory. You can also edit `config.py` and tweak the settings to your liking.
+2. Install required Python packages:
+```shell
+pip install -r requirements.txt
+```
 
-3. Run `main.py`:
+3. Optionally, add some of your own videos to the `sources` directory. You can also edit `config.py` and tweak the settings to your liking.
+
+4. Run `main.py`:
 ```shell
 python main.py  # or python3 main.py
 ```
 
-4. Wait for your video to finish generating. You will find the finished product in the `output` directory.
+5. Wait for your video to finish generating. You will find the finished product in the `output` directory.
 
 
 ## To Do
