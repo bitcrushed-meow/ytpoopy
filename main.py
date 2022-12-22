@@ -85,7 +85,7 @@ for i, clip in enumerate(clips):
 
         elif effect == "bitcrush":
             bitcrush_path = f"{clip.path[:-4]}_bitcrush.mp4"
-            ffmpeg.output(clip.video, clip.audio, bitcrush_path, video_bitrate=50000, audio_bitrate=25000).run()
+            ffmpeg.output(clip.video, clip.audio, bitcrush_path, video_bitrate=100000, audio_bitrate=25000).run()
             clips[i] = Clip(bitcrush_path)
 
         else:
