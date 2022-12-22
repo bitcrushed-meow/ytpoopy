@@ -43,7 +43,7 @@ for i, clip in enumerate(clips):
 
         subclip_video = clip.video.trim(start=subclip_start, duration=subclip_length).setpts("PTS-STARTPTS")
         subclip_audio = clip.audio.filter("atrim", start=subclip_start, duration=subclip_length).filter("asetpts", "PTS-STARTPTS")
-        subclip_output_name = "temp/subclip" + str(i) + "_" + str(x) + ".mp4"
+        subclip_output_name = f"temp/subclip{i}_{x}.mp4"
         
         ffmpeg.output(subclip_video, subclip_audio, subclip_output_name).run()
         subclips.append(Clip(subclip_output_name))
@@ -61,24 +61,35 @@ for i, clip in enumerate(clips):
 # Apply random effects to subclips.
 for i, clip in enumerate(clips):
     effects_num = random.randint(config.min_effects, config.max_effects)
-    subclip_effects = random.choices(config.effects, k=effects_num)
+    subclip_effects = random.sample(config.effects, k=effects_num)
     
     for effect in subclip_effects:
         if effect == "invert_colors":
             clip.video = clip.video.filter("negate")
+
         elif effect == "speedx":
             speedx_factor = random.uniform(config.min_speedx_factor, config.max_speedx_factor)
-            clip.video = clip.video.setpts("PTS/" + str(speedx_factor))
+            speed = random.choice(["slow", "fast"])
+            
+            # Due to limits with FFmpeg, slowed clips are clamped at 0.5 speed.
+            # I might come up with a better solution later.
+            if speed == "slow":
+                speedx_factor = max(1 / speedx_factor, 0.5)
+
+            clip.video = clip.video.setpts(f"PTS/{speedx_factor}")
             clip.audio = clip.audio.filter("atempo", speedx_factor)
+                
         elif effect == "reverse":
             clip.video = clip.video.filter("reverse")
             clip.audio = clip.audio.filter("areverse")
+
         elif effect == "bitcrush":
-            bitcrush_path = clip.path[:-4] + "_bitcrush.mp4"
+            bitcrush_path = f"{clip.path[:-4]}_bitcrush.mp4"
             ffmpeg.output(clip.video, clip.audio, bitcrush_path, video_bitrate=50000, audio_bitrate=25000).run()
             clips[i] = Clip(bitcrush_path)
+
         else:
-            print("Effect '" + effect + "' does not exist!")
+            print(f"Effect '{effect}' does not exist!")
             
 # Concatenate all subclips and output resulting video.
 def generate_video_name(name):
@@ -86,10 +97,10 @@ def generate_video_name(name):
     
     video_id = 0
 
-    while os.path.exists("output/" + name + str(video_id) + ".mp4"):
+    while os.path.exists(f"output/{name}{video_id}.mp4"):
         video_id += 1
         
-    return "output/" + name + str(video_id) + ".mp4"
+    return f"output/{name}{video_id}.mp4"
         
 random.shuffle(clips)
 
